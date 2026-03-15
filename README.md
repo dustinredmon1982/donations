@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GiveRecord — Phoenix Final</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --cream:#f7f3ed; --white:#ffffff; --ink:#1a1714; --gold:#b8924a; --border:#e0d8cc; --green:#2d6a4f; --red:#c0392b; --ink-muted:#9a9088; }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent;}
+  body{font-family:'DM Sans', sans-serif; background:var(--cream); color:var(--ink); padding:12px;}
+  header{display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; max-width:900px; margin-inline:auto;}
+  .logo{font-family:'Playfair Display', serif; font-size:22px;}
+  .logo span{color:var(--gold);}
+  .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ccc; margin-right: 5px; }
+  .reset-lnk{font-size:10px; color:var(--red); text-decoration:underline; cursor:pointer;}
+  #connPanel { background: #fee2e2; border: 1px solid var(--red); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none; }
+  #connPanel input { margin-bottom: 10px; padding: 12px; border: 1px solid var(--red); border-radius: 8px; width:100%; font-size: 16px; }
+  .summary-grid {display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; max-width:900px; margin:0 auto 15px;}
+  .stat-card {background:white; border:1px solid var(--border); padding:10px; border-radius:10px; text-align:center;}
+  .stat-label {font-size:8px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; margin-bottom:3px;}
+  .stat-value {font-family:'Playfair Display', serif; font-size:14px; font-weight:700;}
+  .form-card{background:white; border:1px solid var(--border); border-radius:16px; padding:15px; max-width:900px; margin:0 auto 20px; box-shadow:0 4px 12px rgba(0,0,0,0.05);}
+  .type-tabs{display:flex; gap:6px; margin-bottom:15px;}
+  .type-tab{flex:1; padding:12px 5px; border:1.5px solid var(--border); border-radius:10px; background:white; cursor:pointer; text-align:center; font-size:11px; font-weight:700;}
+  .type-tab.active{background:var(--ink); color:white; border-color:var(--ink);}
+  .bulk-row { display: grid; grid-template-columns: 1.5fr 0.6fr 0.7fr 0.8fr; gap: 6px; margin-bottom: 12px; align-items: end; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
+  label{display:block; font-size:9px; font-weight:700; text-transform:uppercase; color:var(--gold); margin-bottom:4px;}
+  input, select{ width:100%; padding:10px 8px; border:1px solid var(--border); border-radius:8px; font-size:16px; outline:none; background: var(--white); }
+  .total-row {text-align:right; font-weight:700; font-size:16px; margin:15px 0; color:var(--gold);}
+  .photo-btn{border:2px dashed var(--border); border-radius:10px; padding:16px; text-align:center; cursor:pointer; margin:10px 0; background:#fafafa;}
+  .btn-group {display:flex; gap:10px;}
+  .btn-add{flex:2; background:var(--gold); color:white; border:none; padding:16px; border-radius:12px; font-weight:700; cursor:pointer; font-size:16px;}
+  .btn-cancel{flex:1; background:#eee; color:#666; border:none; padding:16px; border-radius:12px; font-weight:700; cursor:pointer; display:none;}
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; border: 1px solid var(--border); }
+  table{width:100%; border-collapse:collapse; font-size:11px; min-width: 500px;}
+  th{background:#f0ebe3; padding:12px 8px; text-align:left; color:#777; font-size:9px; text-transform:uppercase;}
+  td{padding:12px 8px; border-bottom:1px solid #eee; vertical-align: middle;}
+  .del-btn{color:var(--red); font-weight:bold; cursor:pointer; border:none; background:none; font-size:18px;}
+</style>
+</head>
+<body>
+
+<div class="page" style="max-width:900px; margin:0 auto;">
+  <header>
+    <div class="logo">Give<span>Record</span></div>
+    <div class="status-group">
+      <div><span class="status-dot" id="dot"></span><span id="statText" style="font-size:10px; font-weight:bold;">OFFLINE</span></div>
+      <div class="reset-lnk" onclick="resetConn()">Reset Connection</div>
+    </div>
+  </header>
+
+  <div id="connPanel">
+    <label style="color:var(--red)">Connection Required:</label>
+    <input type="text" id="manualUrl" placeholder="Paste Web App URL...">
+    <button class="btn-add" onclick="manualConnect()" style="background:var(--ink)">Connect</button>
+  </div>
+
+  <div class="summary-grid">
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="ytdTotal" style="color:var(--gold)">$0.00</div></div>
+    <div class="stat-card"><div class="stat-label">Cash</div><div class="stat-value" id="ytdCash">$0.00</div></div>
+    <div class="stat-card"><div class="stat-label">Goods</div><div class="stat-value" id="ytdGoods">$0.00</div></div>
+  </div>
+
+  <div class="form-card">
+    <div class="type-tabs">
+      <div id="tab_goods" class="type-tab active" onclick="setType('goods')">📦 Goods</div>
+      <div id="tab_cash" class="type-tab" onclick="setType('cash')">💵 Cash</div>
+      <div id="tab_miles" class="type-tab" onclick="setType('miles')">🚗 Miles</div>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
+      <div><label>Organization</label><input type="text" id="org" placeholder="Goodwill"></div>
+      <div><label>Date</label><input type="date" id="date"></div>
+    </div>
+    <div id="bulkGoods"><div id="rowsContainer"></div></div>
+    <div id="singleEntry" style="display:none;">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div><label>Amt / Mi</label><input type="number" id="singleAmt" placeholder="0.00" oninput="calcTotal()"></div>
+        <div><label>Receipt?</label><select id="rec"><option value="yes">Yes</option><option value="no">No</option></select></div>
+      </div>
+    </div>
+    <div class="total-row">Submitting: <span id="grandTotal">$0.00</span></div>
+    <input type="file" id="cam" accept="image/*" capture="environment" style="display:none" onchange="prepImg(this)">
+    <div class="photo-btn" id="photoBtn" onclick="document.getElementById('cam').click()"><span id="photoText">📷 Attach Receipt Photo</span></div>
+    <div class="btn-group">
+      <button class="btn-cancel" id="cancelBtn" onclick="location.reload()">Cancel</button>
+      <button class="btn-add" id="saveBtn" onclick="save()">Log Donation</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="logTable">
+      <thead><tr><th>Org</th><th>Product</th><th>Qty</th><th>Total</th><th>Time</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let SCRIPT_URL = localStorage.getItem('grUrl') || '';
+let curType = 'goods';
+let b64 = "";
+let allData = [];
+let editingId = null;
+
+const container = document.getElementById('rowsContainer');
+for(let i=1; i<=5; i++) {
+  container.innerHTML += `
+    <div class="bulk-row" id="row_${i}">
+      <div><label>Item ${i}</label>
+        <select class="irs-item" onchange="updateRowValue(${i})">
+          <option value="0">-- Select --</option>
+          <option value="12" data-n="Dress">Dress ($12)</option>
+          <option value="8" data-n="Slacks">Slacks ($8)</option>
+          <option value="6" data-n="Shirt">Shirt ($6)</option>
+          <option value="15" data-n="Coat">Coat ($15)</option>
+          <option value="10" data-n="Shoes">Shoes ($10)</option>
+        </select>
+      </div>
+      <div><label>Qty</label><input type="number" class="irs-qty" inputmode="numeric" value="0" min="0" oninput="calcTotal()"></div>
+      <div><label>Val</label><input type="number" class="irs-unit-val" inputmode="decimal" value="0" step="0.50" oninput="calcTotal()"></div>
+      <div><label>Sub</label><input type="text" class="irs-sub" value="$0.00" disabled></div>
+    </div>`;
+}
+
+document.getElementById('date').valueAsDate = new Date();
+
+function manualConnect() {
+  const u = document.getElementById('manualUrl').value.trim();
+  if(u.includes("script.google.com")) {
+    localStorage.setItem('grUrl', u);
+    location.reload();
+  }
+}
+
+function resetConn() { localStorage.removeItem('grUrl'); location.reload(); }
+
+function setType(t) {
+  curType = t;
+  document.querySelectorAll('.type-tab').forEach(x => x.classList.remove('active'));
+  document.getElementById('tab_'+t).classList.add('active');
+  document.getElementById('bulkGoods').style.display = (t==='goods') ? 'block' : 'none';
+  document.getElementById('singleEntry').style.display = (t!=='goods') ? 'block' : 'none';
+  calcTotal();
+}
+
+function updateRowValue(rowNum) {
+  const row = document.getElementById(`row_${rowNum}`);
+  row.querySelector('.irs-unit-val').value = row.querySelector('.irs-item').value;
+  if(row.querySelector('.irs-qty').value == 0) row.querySelector('.irs-qty').value = 1; 
+  calcTotal();
+}
+
+function calcTotal() {
+  let grand = 0;
+  if(curType === 'goods') {
+    document.querySelectorAll('.bulk-row').forEach(row => {
+      const v = parseFloat(row.querySelector('.irs-unit-val').value) || 0;
+      const q = parseFloat(row.querySelector('.irs-qty').value) || 0;
+      const sub = v * q;
+      row.querySelector('.irs-sub').value = `$${sub.toFixed(2)}`;
+      grand += sub;
+    });
+  } else { grand = parseFloat(document.getElementById('singleAmt').value) || 0; }
+  document.getElementById('grandTotal').innerText = `$${grand.toFixed(2)}`;
+}
+
+async function save() {
+  if(!SCRIPT_URL) { document.getElementById('connPanel').style.display = 'block'; return; }
+  const b = document.getElementById('saveBtn');
+  b.innerText = "Syncing..."; b.disabled = true;
+
+  let items = [];
+  const org = document.getElementById('org').value || "Goodwill";
+  const date = document.getElementById('date').value;
+
+  if(curType === 'goods') {
+    for (let i = 1; i <= 5; i++) {
+      const row = document.getElementById(`row_${i}`);
+      const q = parseFloat(row.querySelector('.irs-qty').value) || 0;
+      const v = parseFloat(row.querySelector('.irs-unit-val').value) || 0;
+      if (q > 0 && v > 0) {
+        items.push({ org, date, type: 'goods', qty: q, amt: (v * q), notes: row.querySelector('.irs-item').selectedOptions[0].getAttribute('data-n'), existingId: editingId });
+      }
+    }
+  } else {
+    items.push({ org, date, type: curType, qty: 0, amt: document.getElementById('singleAmt').value, notes: curType.toUpperCase(), existingId: editingId });
+  }
+
+  try {
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ items, image: b64 }) });
+    setTimeout(() => { location.reload(); }, 1500);
+  } catch (e) { location.reload(); }
+}
+
+async function load() {
+  if(!SCRIPT_URL) { document.getElementById('connPanel').style.display = 'block'; return; }
+  try {
+    const check = await fetch(SCRIPT_URL + "?action=check");
+    if ((await check.text()).includes("connected")) {
+      document.getElementById('dot').style.background = 'var(--green)';
+      document.getElementById('statText').innerText = 'CONNECTED';
+      const r = await fetch(SCRIPT_URL + "?action=load");
+      const d = await r.json();
+      allData = d.rows;
+      const tb = document.querySelector("#logTable tbody");
+      let t = 0, c = 0, g = 0;
+      d.rows.reverse().forEach(row => {
+        t += row.amount;
+        if(row.type === 'cash') c += row.amount; else g += row.amount;
+        tb.innerHTML += `<tr onclick="editEntry('${row.id}')">
+          <td><strong>${row.org}</strong></td>
+          <td>${row.notes || "N/A"}</td>
+          <td>${row.qty || 1}</td>
+          <td>$${row.amount.toFixed(2)}</td>
+          <td style="color:#999; font-size:9px;">${row.displayDate}</td>
+          <td><button class="del-btn" onclick="deleteRow(event, '${row.id}')">×</button></td>
+        </tr>`;
+      });
+      document.getElementById('ytdTotal').innerText = `$${t.toFixed(2)}`;
+      document.getElementById('ytdCash').innerText = `$${c.toFixed(2)}`;
+      document.getElementById('ytdGoods').innerText = `$${g.toFixed(2)}`;
+    }
+  } catch(e) { }
+}
+
+function editEntry(id) {
+  const entry = allData.find(d => d.id == id);
+  if(!entry) return;
+  editingId = id;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  document.getElementById('cancelBtn').style.display = 'block';
+  document.getElementById('saveBtn').innerText = 'Update';
+  setType(entry.type);
+  document.getElementById('org').value = entry.org;
+  document.getElementById('date').value = entry.date;
+  if(entry.type === 'goods') {
+    const row1 = document.getElementById('row_1');
+    row1.querySelector('.irs-unit-val').value = entry.amount / entry.qty;
+    row1.querySelector('.irs-qty').value = entry.qty;
+  } else { document.getElementById('singleAmt').value = entry.amount; }
+  calcTotal();
+}
+
+async function deleteRow(e, id) {
+  e.stopPropagation();
+  if(!confirm("Delete?")) return;
+  await fetch(`${SCRIPT_URL}?action=delete&id=${id}`, {mode: 'no-cors'});
+  location.reload();
+}
+
+function prepImg(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 600;
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        b64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+        document.getElementById('photoText').innerText = "✅ Attached";
+        document.getElementById('photoBtn').classList.add('success');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+load();
+</script>
+</body>
+</html>

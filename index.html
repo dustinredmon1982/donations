@@ -110,7 +110,6 @@
 </div>
 
 <script>
-// Hardcoded latest link
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJhg4s8vM1tAuiHVdXPSlqV0jz8g9pXokg6yrzsarmBmAeG7uyxXCotELCv0gkJBeN/exec";
 
 let curType = 'goods';
@@ -118,7 +117,6 @@ let b64 = "";
 let allData = [];
 let editingId = null;
 
-// Initialize Bulk Rows
 const container = document.getElementById('rowsContainer');
 for(let i=1; i<=5; i++) {
   container.innerHTML += `
@@ -196,11 +194,9 @@ function calcTotal() {
 async function save() {
   const b = document.getElementById('saveBtn');
   b.innerText = "Syncing..."; b.disabled = true;
-
   let items = [];
   const org = document.getElementById('org').value || "Goodwill";
   const date = document.getElementById('date').value;
-
   if(curType === 'goods') {
     for (let i = 1; i <= 5; i++) {
       const row = document.getElementById(`row_${i}`);
@@ -214,10 +210,9 @@ async function save() {
     const amt = parseFloat(document.getElementById('singleAmt').value) || 0;
     if(amt > 0) items.push({ org, date, type: curType, qty: 1, amt: amt, notes: curType.toUpperCase(), existingId: editingId });
   }
-
   try {
-    // Record upload start for the "Processing" indicator
-    localStorage.setItem('lastUploadTime', Date.now());
+    // Tag the upload time so we can show "Processing" for new entries
+    localStorage.setItem('last_push', Date.now());
     await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ items, image: b64 }) });
     setTimeout(() => { location.reload(); }, b64 ? 4000 : 1500);
   } catch (e) { location.reload(); }
@@ -235,7 +230,7 @@ async function load() {
       tb.innerHTML = "";
       let t = 0, c = 0, g = 0;
       
-      const lastUploadTime = localStorage.getItem('lastUploadTime') || 0;
+      const lastPush = parseInt(localStorage.getItem('last_push') || 0);
 
       d.rows.reverse().forEach(row => {
         t += row.amount;
@@ -244,9 +239,12 @@ async function load() {
         let photoDisplay = '—';
         if (row.photo && row.photo.includes('http')) {
           photoDisplay = '📸 Yes';
-        } else if (Date.now() - lastUploadTime < 60000 && lastUploadTime > 0) {
-          // If a sync happened in the last minute, assume photo is still saving
-          photoDisplay = '⏳ Processing';
+        } else {
+          // Only show processing if the row is less than 5 minutes old AND photo is empty
+          const rowTime = new Date(row.displayDate).getTime();
+          if (Date.now() - rowTime < 300000 && Date.now() - lastPush < 300000) {
+            photoDisplay = '⏳ Processing';
+          }
         }
 
         tb.innerHTML += `<tr onclick="editEntry('${row.id}')">

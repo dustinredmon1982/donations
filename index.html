@@ -79,3 +79,232 @@
     <div class="total-row">Submitting: <span id="grandTotal">$0.00</span></div>
 
     <input type="file" id="cam" accept="image/*" capture="environment" style="display:none" onchange="prepImg(this)">
+    <div class="photo-btn" id="photoBtn" onclick="document.getElementById('cam').click()">
+      <span id="photoText">📷 Attach Receipt Photo</span>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-cancel" id="cancelBtn" onclick="location.reload()">Cancel</button>
+      <button class="btn-add" id="saveBtn" onclick="save()">Log Donation</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="logTable">
+      <thead>
+        <tr>
+          <th>Org</th>
+          <th>Product</th>
+          <th>Qty</th>
+          <th>Total</th>
+          <th>Photo</th>
+          <th>Time</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// HARD-CODED CONNECTION LINK
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJhg4s8vM1tAuiHVdXPSlqV0jz8g9pXokg6yrzsarmBmAeG7uyxXCotELCv0gkJBeN/exec";
+
+let curType = 'goods';
+let b64 = "";
+let allData = [];
+let editingId = null;
+
+const container = document.getElementById('rowsContainer');
+for(let i=1; i<=5; i++) {
+  container.innerHTML += `
+    <div class="bulk-row" id="row_${i}">
+      <div><label>Item ${i}</label>
+        <select class="irs-item" onchange="updateRowValue(${i})">
+          <option value="0">-- Select --</option>
+          <optgroup label="Adult Clothing">
+            <option value="12" data-n="Dress">Dress ($12)</option>
+            <option value="8" data-n="Slacks">Slacks ($8)</option>
+            <option value="6" data-n="Shirt">Shirt ($6)</option>
+            <option value="15" data-n="Coat">Coat ($15)</option>
+            <option value="10" data-n="Shoes">Shoes ($10)</option>
+            <option value="5" data-n="T-Shirt">T-Shirt ($5)</option>
+          </optgroup>
+          <optgroup label="Kids & Baby">
+            <option value="5" data-n="Child Pants">Kids Pants ($5)</option>
+            <option value="3" data-n="Child Top">Kids Top ($3)</option>
+            <option value="15" data-n="Stroller/Gear">Stroller/Gear ($15)</option>
+            <option value="8" data-n="Toy Large">Large Toy ($8)</option>
+          </optgroup>
+          <optgroup label="Golf & Sports">
+            <option value="25" data-n="Golf Club">Golf Club ($25)</option>
+            <option value="15" data-n="Golf Shoes">Golf Shoes ($15)</option>
+            <option value="10" data-n="Sports Jersey">Jersey ($10)</option>
+          </optgroup>
+          <optgroup label="Household">
+            <option value="30" data-n="Furniture SM">Small Furn ($30)</option>
+            <option value="75" data-n="Furniture LG">Large Furn ($75)</option>
+            <option value="5" data-n="Kitchenware">Kitchenware ($5)</option>
+            <option value="10" data-n="Small Appliance">Small Appli ($10)</option>
+          </optgroup>
+          <option value="1" data-n="Other">Other (Set Value)</option>
+        </select>
+      </div>
+      <div><label>Qty</label><input type="number" class="irs-qty" inputmode="numeric" value="0" min="0" oninput="calcTotal()"></div>
+      <div><label>Value</label><input type="number" class="irs-unit-val" inputmode="decimal" value="0" step="0.50" oninput="calcTotal()"></div>
+      <div><label>Sub</label><input type="text" class="irs-sub" value="$0.00" disabled></div>
+    </div>`;
+}
+
+document.getElementById('date').valueAsDate = new Date();
+
+function setType(t) {
+  curType = t;
+  document.querySelectorAll('.type-tab').forEach(x => x.classList.remove('active'));
+  document.getElementById('tab_'+t).classList.add('active');
+  document.getElementById('bulkGoods').style.display = (t==='goods') ? 'block' : 'none';
+  document.getElementById('singleEntry').style.display = (t!=='goods') ? 'block' : 'none';
+  calcTotal();
+}
+
+function updateRowValue(rowNum) {
+  const row = document.getElementById(`row_${rowNum}`);
+  const sel = row.querySelector('.irs-item');
+  row.querySelector('.irs-unit-val').value = sel.value;
+  if(row.querySelector('.irs-qty').value == 0) row.querySelector('.irs-qty').value = 1; 
+  calcTotal();
+}
+
+function calcTotal() {
+  let grand = 0;
+  if(curType === 'goods') {
+    document.querySelectorAll('.bulk-row').forEach(row => {
+      const v = parseFloat(row.querySelector('.irs-unit-val').value) || 0;
+      const q = parseFloat(row.querySelector('.irs-qty').value) || 0;
+      const sub = v * q;
+      row.querySelector('.irs-sub').value = `$${sub.toFixed(2)}`;
+      grand += sub;
+    });
+  } else { 
+    grand = parseFloat(document.getElementById('singleAmt').value) || 0; 
+  }
+  document.getElementById('grandTotal').innerText = `$${grand.toFixed(2)}`;
+}
+
+async function save() {
+  const b = document.getElementById('saveBtn');
+  b.innerText = "Syncing..."; b.disabled = true;
+
+  let items = [];
+  const org = document.getElementById('org').value || "Goodwill";
+  const date = document.getElementById('date').value;
+
+  if(curType === 'goods') {
+    for (let i = 1; i <= 5; i++) {
+      const row = document.getElementById(`row_${i}`);
+      const q = parseFloat(row.querySelector('.irs-qty').value) || 0;
+      const v = parseFloat(row.querySelector('.irs-unit-val').value) || 0;
+      if (q > 0 && v > 0) {
+        items.push({ org, date, type: 'goods', qty: q, amt: (v * q), notes: row.querySelector('.irs-item').selectedOptions[0].getAttribute('data-n'), existingId: editingId });
+      }
+    }
+  } else {
+    const amt = parseFloat(document.getElementById('singleAmt').value) || 0;
+    if(amt > 0) items.push({ org, date, type: curType, qty: 1, amt: amt, notes: curType.toUpperCase(), existingId: editingId });
+  }
+
+  try {
+    await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ items, image: b64 }) });
+    setTimeout(() => { location.reload(); }, 1500);
+  } catch (e) { location.reload(); }
+}
+
+async function load() {
+  try {
+    const r = await fetch(SCRIPT_URL + "?action=load");
+    const d = await r.json();
+    if(d.ok) {
+      document.getElementById('dot').style.background = 'var(--green)';
+      document.getElementById('statText').innerText = 'CONNECTED';
+      allData = d.rows;
+      const tb = document.querySelector("#logTable tbody");
+      let t = 0, c = 0, g = 0;
+      d.rows.reverse().forEach(row => {
+        t += row.amount;
+        if(row.type === 'cash') c += row.amount; else g += row.amount;
+        
+        // FIXED PHOTO CHECK: Displays indicator if Photo column has a Drive link
+        const photoStatus = (row.photo && row.photo.includes('http')) ? '📸 Yes' : '—';
+
+        tb.innerHTML += `<tr onclick="editEntry('${row.id}')">
+          <td><strong>${row.org}</strong></td>
+          <td>${row.notes || "N/A"}</td>
+          <td>${row.qty || 1}</td>
+          <td>$${row.amount.toFixed(2)}</td>
+          <td style="text-align:center;">${photoStatus}</td>
+          <td style="color:#999; font-size:9px;">${row.displayDate}</td>
+          <td><button class="del-btn" onclick="deleteRow(event, '${row.id}')">×</button></td>
+        </tr>`;
+      });
+      document.getElementById('ytdTotal').innerText = `$${t.toFixed(2)}`;
+      document.getElementById('ytdCash').innerText = `$${c.toFixed(2)}`;
+      document.getElementById('ytdGoods').innerText = `$${g.toFixed(2)}`;
+    }
+  } catch(e) { 
+    document.getElementById('statText').innerText = 'OFFLINE';
+  }
+}
+
+function editEntry(id) {
+  const entry = allData.find(d => d.id == id);
+  if(!entry) return;
+  editingId = id;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  document.getElementById('cancelBtn').style.display = 'block';
+  document.getElementById('saveBtn').innerText = 'Update';
+  setType(entry.type);
+  document.getElementById('org').value = entry.org;
+  document.getElementById('date').value = entry.date;
+  if(entry.type === 'goods') {
+    const row1 = document.getElementById('row_1');
+    row1.querySelector('.irs-unit-val').value = entry.amount / (entry.qty || 1);
+    row1.querySelector('.irs-qty').value = entry.qty || 1;
+  } else { document.getElementById('singleAmt').value = entry.amount; }
+  calcTotal();
+}
+
+async function deleteRow(e, id) {
+  e.stopPropagation();
+  if(!confirm("Delete?")) return;
+  await fetch(`${SCRIPT_URL}?action=delete&id=${id}`, {mode: 'no-cors'});
+  location.reload();
+}
+
+function prepImg(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 600;
+        let w = img.width, h = img.height;
+        if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+        else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        b64 = canvas.toDataURL('image/jpeg', 0.5).split(',')[1];
+        document.getElementById('photoText').innerText = "✅ Attached";
+        document.getElementById('photoBtn').classList.add('success');
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+load();
+</script>
+</body>
+</html>

@@ -13,6 +13,7 @@
   .logo{font-family:'Playfair Display', serif; font-size:22px;}
   .logo span{color:var(--gold);}
   .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ccc; margin-right: 5px; }
+  .refresh-btn { font-size: 10px; color: var(--gold); text-decoration: underline; cursor: pointer; border: none; background: none; font-weight: bold; }
   .summary-grid {display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; max-width:900px; margin:0 auto 15px;}
   .stat-card {background:white; border:1px solid var(--border); padding:10px; border-radius:10px; text-align:center;}
   .stat-label {font-size:8px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; margin-bottom:3px;}
@@ -44,6 +45,7 @@
     <div class="logo">Give<span>Record</span></div>
     <div class="status-group">
       <div><span class="status-dot" id="dot"></span><span id="statText" style="font-size:10px; font-weight:bold;">CONNECTING...</span></div>
+      <button class="refresh-btn" onclick="load()">Refresh Data</button>
     </div>
   </header>
 
@@ -108,7 +110,6 @@
 </div>
 
 <script>
-// HARD-CODED CONNECTION LINK
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJhg4s8vM1tAuiHVdXPSlqV0jz8g9pXokg6yrzsarmBmAeG7uyxXCotELCv0gkJBeN/exec";
 
 let curType = 'goods';
@@ -186,9 +187,7 @@ function calcTotal() {
       row.querySelector('.irs-sub').value = `$${sub.toFixed(2)}`;
       grand += sub;
     });
-  } else { 
-    grand = parseFloat(document.getElementById('singleAmt').value) || 0; 
-  }
+  } else { grand = parseFloat(document.getElementById('singleAmt').value) || 0; }
   document.getElementById('grandTotal').innerText = `$${grand.toFixed(2)}`;
 }
 
@@ -216,7 +215,7 @@ async function save() {
 
   try {
     await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ items, image: b64 }) });
-    setTimeout(() => { location.reload(); }, 1500);
+    setTimeout(() => { location.reload(); }, 2000);
   } catch (e) { location.reload(); }
 }
 
@@ -229,20 +228,21 @@ async function load() {
       document.getElementById('statText').innerText = 'CONNECTED';
       allData = d.rows;
       const tb = document.querySelector("#logTable tbody");
+      tb.innerHTML = "";
       let t = 0, c = 0, g = 0;
       d.rows.reverse().forEach(row => {
         t += row.amount;
         if(row.type === 'cash') c += row.amount; else g += row.amount;
         
-        // FIXED PHOTO CHECK: Displays indicator if Photo column has a Drive link
-        const photoStatus = (row.photo && row.photo.includes('http')) ? '📸 Yes' : '—';
+        // ROBUST PHOTO CHECK: If it looks like a link or is long, show the icon
+        const photoFound = (row.photo && row.photo.length > 5 && row.photo !== "No Photo") ? '📸 Yes' : '—';
 
         tb.innerHTML += `<tr onclick="editEntry('${row.id}')">
           <td><strong>${row.org}</strong></td>
           <td>${row.notes || "N/A"}</td>
           <td>${row.qty || 1}</td>
           <td>$${row.amount.toFixed(2)}</td>
-          <td style="text-align:center;">${photoStatus}</td>
+          <td style="text-align:center;">${photoFound}</td>
           <td style="color:#999; font-size:9px;">${row.displayDate}</td>
           <td><button class="del-btn" onclick="deleteRow(event, '${row.id}')">×</button></td>
         </tr>`;
@@ -251,9 +251,7 @@ async function load() {
       document.getElementById('ytdCash').innerText = `$${c.toFixed(2)}`;
       document.getElementById('ytdGoods').innerText = `$${g.toFixed(2)}`;
     }
-  } catch(e) { 
-    document.getElementById('statText').innerText = 'OFFLINE';
-  }
+  } catch(e) { document.getElementById('statText').innerText = 'OFFLINE'; }
 }
 
 function editEntry(id) {

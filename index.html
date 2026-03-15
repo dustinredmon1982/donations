@@ -3,19 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>GiveRecord — Phoenix Final</title>
+<title>GiveRecord — Phoenix Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root { --cream:#f7f3ed; --white:#ffffff; --ink:#1a1714; --gold:#b8924a; --border:#e0d8cc; --green:#2d6a4f; --red:#c0392b; --ink-muted:#9a9088; }
   *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color: transparent;}
-  body{font-family:'DM Sans', sans-serif; background:var(--cream); color:var(--ink); padding:12px;}
+  body{font-family:'DM Sans', sans-serif; background:var(--cream); color:var(--ink); padding:12px; line-height: 1.4;}
   header{display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; max-width:900px; margin-inline:auto;}
   .logo{font-family:'Playfair Display', serif; font-size:22px;}
   .logo span{color:var(--gold);}
   .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ccc; margin-right: 5px; }
-  .reset-lnk{font-size:10px; color:var(--red); text-decoration:underline; cursor:pointer;}
-  #connPanel { background: #fee2e2; border: 1px solid var(--red); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none; }
-  #connPanel input { margin-bottom: 10px; padding: 12px; border: 1px solid var(--red); border-radius: 8px; width:100%; font-size: 16px; }
   .summary-grid {display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; max-width:900px; margin:0 auto 15px;}
   .stat-card {background:white; border:1px solid var(--border); padding:10px; border-radius:10px; text-align:center;}
   .stat-label {font-size:8px; font-weight:700; color:var(--ink-muted); text-transform:uppercase; margin-bottom:3px;}
@@ -26,9 +23,10 @@
   .type-tab.active{background:var(--ink); color:white; border-color:var(--ink);}
   .bulk-row { display: grid; grid-template-columns: 1.5fr 0.6fr 0.7fr 0.8fr; gap: 6px; margin-bottom: 12px; align-items: end; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
   label{display:block; font-size:9px; font-weight:700; text-transform:uppercase; color:var(--gold); margin-bottom:4px;}
-  input, select{ width:100%; padding:10px 8px; border:1px solid var(--border); border-radius:8px; font-size:16px; outline:none; background: var(--white); }
+  input, select{ width:100%; padding:10px 8px; border:1px solid var(--border); border-radius:8px; font-size:16px; outline:none; background: var(--white); -webkit-appearance: none;}
   .total-row {text-align:right; font-weight:700; font-size:16px; margin:15px 0; color:var(--gold);}
-  .photo-btn{border:2px dashed var(--border); border-radius:10px; padding:16px; text-align:center; cursor:pointer; margin:10px 0; background:#fafafa;}
+  .photo-btn{border:2px dashed var(--border); border-radius:10px; padding:16px; text-align:center; cursor:pointer; margin:10px 0; background:#fafafa; font-size: 14px;}
+  .photo-btn.success{border-color:var(--green); background:#f0fdf4;}
   .btn-group {display:flex; gap:10px;}
   .btn-add{flex:2; background:var(--gold); color:white; border:none; padding:16px; border-radius:12px; font-weight:700; cursor:pointer; font-size:16px;}
   .btn-cancel{flex:1; background:#eee; color:#666; border:none; padding:16px; border-radius:12px; font-weight:700; cursor:pointer; display:none;}
@@ -40,62 +38,83 @@
 </style>
 </head>
 <body>
+
 <div class="page" style="max-width:900px; margin:0 auto;">
   <header>
     <div class="logo">Give<span>Record</span></div>
     <div class="status-group">
-      <div><span class="status-dot" id="dot"></span><span id="statText" style="font-size:10px; font-weight:bold;">OFFLINE</span></div>
-      <div class="reset-lnk" onclick="resetConn()">Reset Connection</div>
+      <div><span class="status-dot" id="dot"></span><span id="statText" style="font-size:10px; font-weight:bold;">CONNECTING...</span></div>
     </div>
   </header>
-  <div id="connPanel">
-    <label style="color:var(--red)">Connection Required:</label>
-    <input type="text" id="manualUrl" placeholder="Paste Web App URL...">
-    <button class="btn-add" onclick="manualConnect()" style="background:var(--ink)">Connect</button>
-  </div>
+
   <div class="summary-grid">
-    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="ytdTotal" style="color:var(--gold)">$0.00</div></div>
+    <div class="stat-card"><div class="stat-label">YTD Total</div><div class="stat-value" id="ytdTotal" style="color:var(--gold)">$0.00</div></div>
     <div class="stat-card"><div class="stat-label">Cash</div><div class="stat-value" id="ytdCash">$0.00</div></div>
     <div class="stat-card"><div class="stat-label">Goods</div><div class="stat-value" id="ytdGoods">$0.00</div></div>
   </div>
+
   <div class="form-card">
     <div class="type-tabs">
       <div id="tab_goods" class="type-tab active" onclick="setType('goods')">📦 Goods</div>
       <div id="tab_cash" class="type-tab" onclick="setType('cash')">💵 Cash</div>
       <div id="tab_miles" class="type-tab" onclick="setType('miles')">🚗 Miles</div>
     </div>
+
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:15px;">
       <div><label>Organization</label><input type="text" id="org" placeholder="Goodwill"></div>
       <div><label>Date</label><input type="date" id="date"></div>
     </div>
-    <div id="bulkGoods"><div id="rowsContainer"></div></div>
+
+    <div id="bulkGoods">
+      <div id="rowsContainer"></div>
+    </div>
+
     <div id="singleEntry" style="display:none;">
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
         <div><label>Amt / Mi</label><input type="number" id="singleAmt" placeholder="0.00" oninput="calcTotal()"></div>
         <div><label>Receipt?</label><select id="rec"><option value="yes">Yes</option><option value="no">No</option></select></div>
       </div>
     </div>
+
     <div class="total-row">Submitting: <span id="grandTotal">$0.00</span></div>
+
     <input type="file" id="cam" accept="image/*" capture="environment" style="display:none" onchange="prepImg(this)">
-    <div class="photo-btn" id="photoBtn" onclick="document.getElementById('cam').click()"><span id="photoText">📷 Attach Receipt Photo</span></div>
+    <div class="photo-btn" id="photoBtn" onclick="document.getElementById('cam').click()">
+      <span id="photoText">📷 Attach Receipt Photo</span>
+    </div>
+
     <div class="btn-group">
       <button class="btn-cancel" id="cancelBtn" onclick="location.reload()">Cancel</button>
       <button class="btn-add" id="saveBtn" onclick="save()">Log Donation</button>
     </div>
   </div>
+
   <div class="table-wrap">
     <table id="logTable">
-      <thead><tr><th>Org</th><th>Product</th><th>Qty</th><th>Total</th><th>Time</th><th></th></tr></thead>
+      <thead>
+        <tr>
+          <th>Org</th>
+          <th>Product</th>
+          <th>Qty</th>
+          <th>Total</th>
+          <th>Photo</th>
+          <th>Time</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody></tbody>
     </table>
   </div>
 </div>
+
 <script>
-let SCRIPT_URL = localStorage.getItem('grUrl') || '';
+// EMBEDDED SCRIPT URL - No more manual connection needed
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJhg4s8vM1tAuiHVdXPSlqV0jz8g9pXokg6yrzsarmBmAeG7uyxXCotELCv0gkJBeN/exec";
 let curType = 'goods';
 let b64 = "";
 let allData = [];
 let editingId = null;
+
 const container = document.getElementById('rowsContainer');
 for(let i=1; i<=5; i++) {
   container.innerHTML += `
@@ -103,24 +122,42 @@ for(let i=1; i<=5; i++) {
       <div><label>Item ${i}</label>
         <select class="irs-item" onchange="updateRowValue(${i})">
           <option value="0">-- Select --</option>
-          <option value="12" data-n="Dress">Dress ($12)</option>
-          <option value="8" data-n="Slacks">Slacks ($8)</option>
-          <option value="6" data-n="Shirt">Shirt ($6)</option>
-          <option value="15" data-n="Coat">Coat ($15)</option>
-          <option value="10" data-n="Shoes">Shoes ($10)</option>
+          <optgroup label="Adult Clothing">
+            <option value="12" data-n="Dress">Dress ($12)</option>
+            <option value="8" data-n="Slacks">Slacks ($8)</option>
+            <option value="6" data-n="Shirt">Shirt ($6)</option>
+            <option value="15" data-n="Coat">Coat ($15)</option>
+            <option value="10" data-n="Shoes">Shoes ($10)</option>
+            <option value="5" data-n="T-Shirt">T-Shirt ($5)</option>
+          </optgroup>
+          <optgroup label="Kids & Baby">
+            <option value="5" data-n="Child Pants">Kids Pants ($5)</option>
+            <option value="3" data-n="Child Top">Kids Top ($3)</option>
+            <option value="15" data-n="Stroller/Gear">Stroller/Gear ($15)</option>
+            <option value="8" data-n="Toy Large">Large Toy ($8)</option>
+          </optgroup>
+          <optgroup label="Golf & Sports">
+            <option value="25" data-n="Golf Club">Golf Club ($25)</option>
+            <option value="15" data-n="Golf Shoes">Golf Shoes ($15)</option>
+            <option value="10" data-n="Sports Jersey">Jersey ($10)</option>
+          </optgroup>
+          <optgroup label="Household">
+            <option value="30" data-n="Furniture SM">Small Furn ($30)</option>
+            <option value="75" data-n="Furniture LG">Large Furn ($75)</option>
+            <option value="5" data-n="Kitchenware">Kitchenware ($5)</option>
+            <option value="10" data-n="Small Appliance">Small Appli ($10)</option>
+          </optgroup>
+          <option value="1" data-n="Other">Other (Set Value)</option>
         </select>
       </div>
       <div><label>Qty</label><input type="number" class="irs-qty" inputmode="numeric" value="0" min="0" oninput="calcTotal()"></div>
-      <div><label>Val</label><input type="number" class="irs-unit-val" inputmode="decimal" value="0" step="0.50" oninput="calcTotal()"></div>
+      <div><label>Value</label><input type="number" class="irs-unit-val" inputmode="decimal" value="0" step="0.50" oninput="calcTotal()"></div>
       <div><label>Sub</label><input type="text" class="irs-sub" value="$0.00" disabled></div>
     </div>`;
 }
+
 document.getElementById('date').valueAsDate = new Date();
-function manualConnect() {
-  const u = document.getElementById('manualUrl').value.trim();
-  if(u.includes("script.google.com")) { localStorage.setItem('grUrl', u); location.reload(); }
-}
-function resetConn() { localStorage.removeItem('grUrl'); location.reload(); }
+
 function setType(t) {
   curType = t;
   document.querySelectorAll('.type-tab').forEach(x => x.classList.remove('active'));
@@ -129,6 +166,7 @@ function setType(t) {
   document.getElementById('singleEntry').style.display = (t!=='goods') ? 'block' : 'none';
   calcTotal();
 }
+
 function updateRowValue(rowNum) {
   const row = document.getElementById(`row_${rowNum}`);
   const sel = row.querySelector('.irs-item');
@@ -136,6 +174,7 @@ function updateRowValue(rowNum) {
   if(row.querySelector('.irs-qty').value == 0) row.querySelector('.irs-qty').value = 1; 
   calcTotal();
 }
+
 function calcTotal() {
   let grand = 0;
   if(curType === 'goods') {
@@ -146,16 +185,20 @@ function calcTotal() {
       row.querySelector('.irs-sub').value = `$${sub.toFixed(2)}`;
       grand += sub;
     });
-  } else { grand = parseFloat(document.getElementById('singleAmt').value) || 0; }
+  } else { 
+    grand = parseFloat(document.getElementById('singleAmt').value) || 0; 
+  }
   document.getElementById('grandTotal').innerText = `$${grand.toFixed(2)}`;
 }
+
 async function save() {
-  if(!SCRIPT_URL) { document.getElementById('connPanel').style.display = 'block'; return; }
   const b = document.getElementById('saveBtn');
   b.innerText = "Syncing..."; b.disabled = true;
+
   let items = [];
   const org = document.getElementById('org').value || "Goodwill";
   const date = document.getElementById('date').value;
+
   if(curType === 'goods') {
     for (let i = 1; i <= 5; i++) {
       const row = document.getElementById(`row_${i}`);
@@ -166,34 +209,40 @@ async function save() {
       }
     }
   } else {
-    const sAmt = parseFloat(document.getElementById('singleAmt').value) || 0;
-    if(sAmt > 0) items.push({ org, date, type: curType, qty: 0, amt: sAmt, notes: curType.toUpperCase(), existingId: editingId });
+    const amt = parseFloat(document.getElementById('singleAmt').value) || 0;
+    if(amt > 0) items.push({ org, date, type: curType, qty: 1, amt: amt, notes: curType.toUpperCase(), existingId: editingId });
   }
+
   try {
+    // Mobile Fetch Fix: Using no-cors to ensure it fires even on iPhone
     await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ items, image: b64 }) });
     setTimeout(() => { location.reload(); }, 1500);
   } catch (e) { location.reload(); }
 }
+
 async function load() {
-  if(!SCRIPT_URL) { document.getElementById('connPanel').style.display = 'block'; return; }
   try {
-    const check = await fetch(SCRIPT_URL + "?action=check");
-    if ((await check.text()).includes("connected")) {
+    const r = await fetch(SCRIPT_URL + "?action=load");
+    const d = await r.json();
+    if(d.ok) {
       document.getElementById('dot').style.background = 'var(--green)';
       document.getElementById('statText').innerText = 'CONNECTED';
-      const r = await fetch(SCRIPT_URL + "?action=load");
-      const d = await r.json();
       allData = d.rows;
       const tb = document.querySelector("#logTable tbody");
       let t = 0, c = 0, g = 0;
       d.rows.reverse().forEach(row => {
         t += row.amount;
         if(row.type === 'cash') c += row.amount; else g += row.amount;
+        
+        // Check if there is a photo link
+        const hasPhoto = (row.photo && row.photo.includes('http')) ? '📸 Yes' : '—';
+
         tb.innerHTML += `<tr onclick="editEntry('${row.id}')">
           <td><strong>${row.org}</strong></td>
           <td>${row.notes || "N/A"}</td>
           <td>${row.qty || 1}</td>
           <td>$${row.amount.toFixed(2)}</td>
+          <td>${hasPhoto}</td>
           <td style="color:#999; font-size:9px;">${row.displayDate}</td>
           <td><button class="del-btn" onclick="deleteRow(event, '${row.id}')">×</button></td>
         </tr>`;
@@ -202,8 +251,11 @@ async function load() {
       document.getElementById('ytdCash').innerText = `$${c.toFixed(2)}`;
       document.getElementById('ytdGoods').innerText = `$${g.toFixed(2)}`;
     }
-  } catch(e) { }
+  } catch(e) { 
+    document.getElementById('statText').innerText = 'OFFLINE';
+  }
 }
+
 function editEntry(id) {
   const entry = allData.find(d => d.id == id);
   if(!entry) return;
@@ -216,17 +268,19 @@ function editEntry(id) {
   document.getElementById('date').value = entry.date;
   if(entry.type === 'goods') {
     const row1 = document.getElementById('row_1');
-    row1.querySelector('.irs-unit-val').value = entry.amount / entry.qty;
-    row1.querySelector('.irs-qty').value = entry.qty;
+    row1.querySelector('.irs-unit-val').value = entry.amount / (entry.qty || 1);
+    row1.querySelector('.irs-qty').value = entry.qty || 1;
   } else { document.getElementById('singleAmt').value = entry.amount; }
   calcTotal();
 }
+
 async function deleteRow(e, id) {
   e.stopPropagation();
   if(!confirm("Delete?")) return;
   await fetch(`${SCRIPT_URL}?action=delete&id=${id}`, {mode: 'no-cors'});
   location.reload();
 }
+
 function prepImg(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();

@@ -40,7 +40,6 @@
 </style>
 </head>
 <body>
-
 <div class="page" style="max-width:900px; margin:0 auto;">
   <header>
     <div class="logo">Give<span>Record</span></div>
@@ -49,19 +48,16 @@
       <div class="reset-lnk" onclick="resetConn()">Reset Connection</div>
     </div>
   </header>
-
   <div id="connPanel">
     <label style="color:var(--red)">Connection Required:</label>
     <input type="text" id="manualUrl" placeholder="Paste Web App URL...">
     <button class="btn-add" onclick="manualConnect()" style="background:var(--ink)">Connect</button>
   </div>
-
   <div class="summary-grid">
     <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="ytdTotal" style="color:var(--gold)">$0.00</div></div>
     <div class="stat-card"><div class="stat-label">Cash</div><div class="stat-value" id="ytdCash">$0.00</div></div>
     <div class="stat-card"><div class="stat-label">Goods</div><div class="stat-value" id="ytdGoods">$0.00</div></div>
   </div>
-
   <div class="form-card">
     <div class="type-tabs">
       <div id="tab_goods" class="type-tab active" onclick="setType('goods')">📦 Goods</div>
@@ -87,7 +83,6 @@
       <button class="btn-add" id="saveBtn" onclick="save()">Log Donation</button>
     </div>
   </div>
-
   <div class="table-wrap">
     <table id="logTable">
       <thead><tr><th>Org</th><th>Product</th><th>Qty</th><th>Total</th><th>Time</th><th></th></tr></thead>
@@ -95,14 +90,12 @@
     </table>
   </div>
 </div>
-
 <script>
 let SCRIPT_URL = localStorage.getItem('grUrl') || '';
 let curType = 'goods';
 let b64 = "";
 let allData = [];
 let editingId = null;
-
 const container = document.getElementById('rowsContainer');
 for(let i=1; i<=5; i++) {
   container.innerHTML += `
@@ -122,19 +115,12 @@ for(let i=1; i<=5; i++) {
       <div><label>Sub</label><input type="text" class="irs-sub" value="$0.00" disabled></div>
     </div>`;
 }
-
 document.getElementById('date').valueAsDate = new Date();
-
 function manualConnect() {
   const u = document.getElementById('manualUrl').value.trim();
-  if(u.includes("script.google.com")) {
-    localStorage.setItem('grUrl', u);
-    location.reload();
-  }
+  if(u.includes("script.google.com")) { localStorage.setItem('grUrl', u); location.reload(); }
 }
-
 function resetConn() { localStorage.removeItem('grUrl'); location.reload(); }
-
 function setType(t) {
   curType = t;
   document.querySelectorAll('.type-tab').forEach(x => x.classList.remove('active'));
@@ -143,14 +129,13 @@ function setType(t) {
   document.getElementById('singleEntry').style.display = (t!=='goods') ? 'block' : 'none';
   calcTotal();
 }
-
 function updateRowValue(rowNum) {
   const row = document.getElementById(`row_${rowNum}`);
-  row.querySelector('.irs-unit-val').value = row.querySelector('.irs-item').value;
+  const sel = row.querySelector('.irs-item');
+  row.querySelector('.irs-unit-val').value = sel.value;
   if(row.querySelector('.irs-qty').value == 0) row.querySelector('.irs-qty').value = 1; 
   calcTotal();
 }
-
 function calcTotal() {
   let grand = 0;
   if(curType === 'goods') {
@@ -164,16 +149,13 @@ function calcTotal() {
   } else { grand = parseFloat(document.getElementById('singleAmt').value) || 0; }
   document.getElementById('grandTotal').innerText = `$${grand.toFixed(2)}`;
 }
-
 async function save() {
   if(!SCRIPT_URL) { document.getElementById('connPanel').style.display = 'block'; return; }
   const b = document.getElementById('saveBtn');
   b.innerText = "Syncing..."; b.disabled = true;
-
   let items = [];
   const org = document.getElementById('org').value || "Goodwill";
   const date = document.getElementById('date').value;
-
   if(curType === 'goods') {
     for (let i = 1; i <= 5; i++) {
       const row = document.getElementById(`row_${i}`);
@@ -184,15 +166,14 @@ async function save() {
       }
     }
   } else {
-    items.push({ org, date, type: curType, qty: 0, amt: document.getElementById('singleAmt').value, notes: curType.toUpperCase(), existingId: editingId });
+    const sAmt = parseFloat(document.getElementById('singleAmt').value) || 0;
+    if(sAmt > 0) items.push({ org, date, type: curType, qty: 0, amt: sAmt, notes: curType.toUpperCase(), existingId: editingId });
   }
-
   try {
     await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ items, image: b64 }) });
     setTimeout(() => { location.reload(); }, 1500);
   } catch (e) { location.reload(); }
 }
-
 async function load() {
   if(!SCRIPT_URL) { document.getElementById('connPanel').style.display = 'block'; return; }
   try {
@@ -223,7 +204,6 @@ async function load() {
     }
   } catch(e) { }
 }
-
 function editEntry(id) {
   const entry = allData.find(d => d.id == id);
   if(!entry) return;
@@ -241,14 +221,12 @@ function editEntry(id) {
   } else { document.getElementById('singleAmt').value = entry.amount; }
   calcTotal();
 }
-
 async function deleteRow(e, id) {
   e.stopPropagation();
   if(!confirm("Delete?")) return;
   await fetch(`${SCRIPT_URL}?action=delete&id=${id}`, {mode: 'no-cors'});
   location.reload();
 }
-
 function prepImg(input) {
   if (input.files && input.files[0]) {
     const reader = new FileReader();
